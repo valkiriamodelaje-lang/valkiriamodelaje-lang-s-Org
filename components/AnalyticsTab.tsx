@@ -30,28 +30,31 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ logs }) => {
   }, [logs, startDate, endDate]);
 
   const stats = useMemo(() => {
-    const totalTokens = filteredLogs.reduce((acc, l) => acc + l.totalTokens, 0);
-    const totalHours = filteredLogs.reduce((acc, l) => acc + l.horasConexion, 0);
-    const efficiency = totalHours > 0 ? (totalTokens / totalHours).toFixed(1) : 0;
+    const totalTokens = filteredLogs.reduce((acc, l) => acc + Number(l.totalTokens), 0);
+    const totalHours = filteredLogs.reduce((acc, l) => acc + Number(l.horasConexion), 0);
+    const efficiency = totalHours > 0 ? (totalTokens / totalHours).toFixed(1) : "0";
     
     // Top Sede
     const sedeMap: Record<string, number> = {};
     filteredLogs.forEach(l => {
-      sedeMap[l.sede] = (sedeMap[l.sede] || 0) + l.totalTokens;
+      const name = l.sedeName || 'Desconocida';
+      sedeMap[name] = (sedeMap[name] || 0) + Number(l.totalTokens);
     });
     const topSede = Object.entries(sedeMap).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
     // Top Model
     const modelMap: Record<string, number> = {};
     filteredLogs.forEach(l => {
-      modelMap[l.modelo] = (modelMap[l.modelo] || 0) + l.totalTokens;
+      const name = l.modeloName || 'Desconocida';
+      modelMap[name] = (modelMap[name] || 0) + Number(l.totalTokens);
     });
     const topModel = Object.entries(modelMap).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
     // Bar Chart Data (Tokens by Platform)
     const platformDataMap: Record<string, number> = {};
     filteredLogs.forEach(l => {
-      platformDataMap[l.plataforma] = (platformDataMap[l.plataforma] || 0) + l.totalTokens;
+      const name = l.plataformaName || 'Desconocida';
+      platformDataMap[name] = (platformDataMap[name] || 0) + Number(l.totalTokens);
     });
     const platformData = Object.entries(platformDataMap).map(([name, value]) => ({ name, value }));
 
@@ -101,66 +104,73 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ logs }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Platforms Bar Chart */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
           <h3 className="text-lg font-semibold text-white mb-6">Tokens por Plataforma</h3>
           <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.platformData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
-                  itemStyle={{ color: '#e2e8f0' }}
-                />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                  {stats.platformData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Sedes Pie Chart */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
-          <h3 className="text-lg font-semibold text-white mb-6">Distribución por Sede</h3>
-          <div className="h-80 flex flex-col md:flex-row items-center justify-center">
-            <div className="flex-1 h-full w-full">
+            {stats.platformData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.sedeData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {stats.sedeData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
+                <BarChart data={stats.platformData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
                     itemStyle={{ color: '#e2e8f0' }}
                   />
-                </PieChart>
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {stats.platformData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
-            </div>
-            {/* Legend replacement */}
-            <div className="flex flex-col gap-2 p-4 min-w-[150px]">
-              {stats.sedeData.map((entry, index) => (
-                <div key={entry.name} className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                  <span className="text-xs text-slate-400 truncate max-w-[120px]">{entry.name}</span>
-                  <span className="text-xs font-bold text-slate-200 ml-auto">{entry.value}</span>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-500 text-sm italic">Sin datos en este rango</div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
+          <h3 className="text-lg font-semibold text-white mb-6">Distribución por Sede</h3>
+          <div className="h-80 flex flex-col md:flex-row items-center justify-center">
+            {stats.sedeData.length > 0 ? (
+              <>
+                <div className="flex-1 h-full w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.sedeData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {stats.sedeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                        itemStyle={{ color: '#e2e8f0' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
-              ))}
-            </div>
+                <div className="flex flex-col gap-2 p-4 min-w-[150px]">
+                  {stats.sedeData.map((entry, index) => (
+                    <div key={entry.name} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <span className="text-xs text-slate-400 truncate max-w-[120px]">{entry.name}</span>
+                      <span className="text-xs font-bold text-slate-200 ml-auto">{entry.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-500 text-sm italic">Sin datos en este rango</div>
+            )}
           </div>
         </div>
       </div>
