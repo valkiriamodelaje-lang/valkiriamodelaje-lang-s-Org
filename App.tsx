@@ -6,13 +6,28 @@ import { AnalyticsTab } from './components/AnalyticsTab';
 import { SettingsTab } from './components/SettingsTab';
 import { AttendanceLog, Configuration, TabType, Sede, Modelo, Plataforma } from './types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Terminal } from 'lucide-react';
 
-// Acceso a variables de entorno
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+/**
+ * Obtiene variables de entorno de forma segura evitando errores de 'undefined'
+ * mediante el uso de encadenamiento opcional (optional chaining).
+ * Busca en import.meta.env (Vite) y process.env (Vercel/Node) con y sin prefijo VITE_.
+ */
+const SUPABASE_URL = 
+  (import.meta as any).env?.VITE_SUPABASE_URL || 
+  (import.meta as any).env?.SUPABASE_URL || 
+  (typeof process !== 'undefined' ? (process as any).env?.VITE_SUPABASE_URL : '') ||
+  (typeof process !== 'undefined' ? (process as any).env?.SUPABASE_URL : '') ||
+  '';
 
-// Inicialización segura del cliente
+const SUPABASE_ANON_KEY = 
+  (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 
+  (import.meta as any).env?.SUPABASE_ANON_KEY || 
+  (typeof process !== 'undefined' ? (process as any).env?.VITE_SUPABASE_ANON_KEY : '') ||
+  (typeof process !== 'undefined' ? (process as any).env?.SUPABASE_ANON_KEY : '') ||
+  '';
+
+// Inicialización única del cliente de Supabase
 const supabase: SupabaseClient | null = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
   : null;
@@ -83,7 +98,7 @@ export default function App() {
       }
     } catch (err: any) {
       console.error("Error en fetchData:", err);
-      setError(err.message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -119,19 +134,26 @@ export default function App() {
 
   if (!supabase) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-slate-100 font-sans">
         <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 text-center shadow-2xl">
-          <AlertCircle className="text-amber-500 mx-auto mb-4" size={48} />
-          <h1 className="text-xl font-bold text-white mb-4">Configuración Requerida</h1>
-          <p className="text-slate-400 text-sm mb-6">
-            Asegúrate de agregar <strong>SUPABASE_URL</strong> y <strong>SUPABASE_ANON_KEY</strong> en las variables de entorno de Vercel.
+          <AlertCircle className="text-amber-500 mx-auto mb-4" size={56} />
+          <h1 className="text-2xl font-bold mb-4">Configuración Pendiente</h1>
+          <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+            Para que <strong>ValkiriaStudio</strong> funcione correctamente en producción, debes configurar las variables de entorno.
           </p>
-          <div className="bg-slate-900/50 p-4 rounded-lg text-left text-xs text-slate-500 font-mono">
-            Vercel &rarr; Settings &rarr; Environment Variables
+          
+          <div className="space-y-4 text-left">
+            <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
+              <div className="flex items-center gap-2 mb-2 text-indigo-400">
+                <Terminal size={16} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Variables en Vercel</span>
+              </div>
+              <ul className="text-xs text-slate-300 space-y-1 font-mono">
+                <li>VITE_SUPABASE_URL</li>
+                <li>VITE_SUPABASE_ANON_KEY</li>
+              </ul>
+            </div>
           </div>
-          <p className="mt-4 text-[10px] text-slate-500 italic">
-            * Después de guardar, ve a Deployments y haz clic en "Redeploy".
-          </p>
         </div>
       </div>
     );
