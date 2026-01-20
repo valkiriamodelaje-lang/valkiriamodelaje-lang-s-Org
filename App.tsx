@@ -132,7 +132,7 @@ export default function App() {
           <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-700 text-left">
             <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest mb-2">Instrucciones</p>
             <p className="text-[11px] text-slate-300 leading-relaxed">
-              1. Ve a Vercel Settings > Environment Variables.<br/>
+              1. Ve a Vercel Settings &gt; Environment Variables.<br/>
               2. Agrega las variables con el prefijo <strong>VITE_</strong>.<br/>
               3. Haz un nuevo "Redeploy" para aplicar los cambios.
             </p>
