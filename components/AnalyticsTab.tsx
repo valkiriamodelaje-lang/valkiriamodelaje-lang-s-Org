@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { AttendanceLog, Configuration } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import { TrendingUp, Users, Target, Zap, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
+import { TrendingUp, Users, Target, Zap, Calendar as CalendarIcon, ArrowRight, RefreshCw } from 'lucide-react';
 
 interface AnalyticsTabProps {
   logs: AttendanceLog[];
@@ -10,6 +10,7 @@ interface AnalyticsTabProps {
 }
 
 export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ logs }) => {
+  // Inicializa el rango de fechas (últimos 30 días hasta hoy)
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 30);
@@ -17,11 +18,13 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ logs }) => {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
+  // Filtrado robusto de logs basado en el rango seleccionado
   const filteredLogs = useMemo(() => {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
+    
     const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999);
+    end.setHours(23, 59, 59, 999); // Asegura incluir todo el día final
     
     return logs.filter(l => {
       const logDate = new Date(l.date);
@@ -29,50 +32,59 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ logs }) => {
     });
   }, [logs, startDate, endDate]);
 
+  // Cálculo de estadísticas globales e indicadores clave (KPIs)
   const stats = useMemo(() => {
-    const totalTokens = filteredLogs.reduce((acc, l) => acc + Number(l.totalTokens), 0);
-    const totalHours = filteredLogs.reduce((acc, l) => acc + Number(l.horasConexion), 0);
+    const totalTokens = filteredLogs.reduce((acc, l) => acc + (Number(l.totalTokens) || 0), 0);
+    const totalHours = filteredLogs.reduce((acc, l) => acc + (Number(l.horasConexion) || 0), 0);
     const efficiency = totalHours > 0 ? (totalTokens / totalHours).toFixed(1) : "0";
     
-    // Top Sede
+    // Sede Líder en Tokens
     const sedeMap: Record<string, number> = {};
     filteredLogs.forEach(l => {
-      const name = l.sedeName || 'Desconocida';
-      sedeMap[name] = (sedeMap[name] || 0) + Number(l.totalTokens);
+      const name = l.sedeName || 'Sin Sede';
+      sedeMap[name] = (sedeMap[name] || 0) + (Number(l.totalTokens) || 0);
     });
-    const topSede = Object.entries(sedeMap).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+    const topSedeEntry = Object.entries(sedeMap).sort((a, b) => b[1] - a[1])[0];
+    const topSede = topSedeEntry ? topSedeEntry[0] : 'N/A';
 
-    // Top Model
+    // Modelo Top
     const modelMap: Record<string, number> = {};
     filteredLogs.forEach(l => {
       const name = l.modeloName || 'Desconocida';
-      modelMap[name] = (modelMap[name] || 0) + Number(l.totalTokens);
+      modelMap[name] = (modelMap[name] || 0) + (Number(l.totalTokens) || 0);
     });
-    const topModel = Object.entries(modelMap).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+    const topModelEntry = Object.entries(modelMap).sort((a, b) => b[1] - a[1])[0];
+    const topModel = topModelEntry ? topModelEntry[0] : 'N/A';
 
-    // Bar Chart Data (Tokens by Platform)
+    // Datos para Gráfico de Barras (Tokens por Plataforma)
     const platformDataMap: Record<string, number> = {};
     filteredLogs.forEach(l => {
-      const name = l.plataformaName || 'Desconocida';
-      platformDataMap[name] = (platformDataMap[name] || 0) + Number(l.totalTokens);
+      const name = l.plataformaName || 'Otros';
+      platformDataMap[name] = (platformDataMap[name] || 0) + (Number(l.totalTokens) || 0);
     });
-    const platformData = Object.entries(platformDataMap).map(([name, value]) => ({ name, value }));
+    const platformData = Object.entries(platformDataMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
 
-    // Pie Chart Data (Tokens by Sede)
-    const sedeData = Object.entries(sedeMap).map(([name, value]) => ({ name, value }));
+    // Datos para Gráfico de Torta (Tokens por Sede)
+    const sedeData = Object.entries(sedeMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
 
     return { totalTokens, totalHours, efficiency, topSede, topModel, platformData, sedeData };
   }, [filteredLogs]);
 
-  const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#fb923c', '#facc15'];
+  const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#fb923c', '#facc15', '#22c55e'];
 
   return (
     <div className="space-y-8 animate-fadeIn">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white">Indicadores de Gestión</h2>
-          <p className="text-slate-400">Análisis detallado de rendimiento y eficiencia.</p>
+          <p className="text-slate-400">Panel de control de rendimiento de ValkiriaStudio.</p>
         </div>
+        
+        {/* Filtro de Fecha */}
         <div className="flex flex-col md:flex-row items-center gap-3 bg-slate-800 p-3 rounded-xl border border-slate-700 shadow-lg">
           <div className="flex items-center gap-2">
             <CalendarIcon size={16} className="text-indigo-400" />
@@ -97,13 +109,14 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ logs }) => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KPICard title="Total Tokens" value={stats.totalTokens.toLocaleString()} subtitle="En el periodo" icon={TrendingUp} color="emerald" />
-        <KPICard title="Eficiencia" value={`${stats.efficiency}`} subtitle="Tokens / Hora" icon={Zap} color="indigo" />
-        <KPICard title="Sede Líder" value={stats.topSede} subtitle="Máximo Generador" icon={Target} color="rose" />
-        <KPICard title="Modelo Top" value={stats.topModel} subtitle="Mejor Desempeño" icon={Users} color="amber" />
+        <KPICard title="Total Tokens" value={stats.totalTokens.toLocaleString()} subtitle="Acumulado periodo" icon={TrendingUp} color="emerald" />
+        <KPICard title="Eficiencia Promedio" value={`${stats.efficiency}`} subtitle="Tokens por Hora" icon={Zap} color="indigo" />
+        <KPICard title="Sede Líder" value={stats.topSede} subtitle="Mayor producción" icon={Target} color="rose" />
+        <KPICard title="Modelo Estrella" value={stats.topModel} subtitle="Rendimiento Top" icon={Users} color="amber" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Gráfico de Barras */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
           <h3 className="text-lg font-semibold text-white mb-6">Tokens por Plataforma</h3>
           <div className="h-80">
@@ -125,13 +138,17 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ logs }) => {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-500 text-sm italic">Sin datos en este rango</div>
+              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm italic">
+                <RefreshCw size={24} className="mb-2 opacity-20" />
+                Sin datos para este rango
+              </div>
             )}
           </div>
         </div>
 
+        {/* Gráfico de Torta */}
         <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
-          <h3 className="text-lg font-semibold text-white mb-6">Distribución por Sede</h3>
+          <h3 className="text-lg font-semibold text-white mb-6">Distribución de Tokens por Sede</h3>
           <div className="h-80 flex flex-col md:flex-row items-center justify-center">
             {stats.sedeData.length > 0 ? (
               <>
@@ -158,18 +175,21 @@ export const AnalyticsTab: React.FC<AnalyticsTabProps> = ({ logs }) => {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex flex-col gap-2 p-4 min-w-[150px]">
+                <div className="flex flex-col gap-2 p-4 min-w-[150px] bg-slate-900/30 rounded-lg">
                   {stats.sedeData.map((entry, index) => (
                     <div key={entry.name} className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <span className="text-xs text-slate-400 truncate max-w-[120px]">{entry.name}</span>
-                      <span className="text-xs font-bold text-slate-200 ml-auto">{entry.value}</span>
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <span className="text-[10px] text-slate-400 truncate max-w-[100px]">{entry.name}</span>
+                      <span className="text-[10px] font-bold text-slate-200 ml-auto">{entry.value.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
               </>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-500 text-sm italic">Sin datos en este rango</div>
+              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-sm italic">
+                <RefreshCw size={24} className="mb-2 opacity-20" />
+                No hay actividad registrada
+              </div>
             )}
           </div>
         </div>
@@ -187,15 +207,15 @@ const KPICard = ({ title, value, subtitle, icon: Icon, color }: any) => {
   };
 
   return (
-    <div className={`p-6 rounded-xl border ${colorMap[color]} shadow-lg transition-transform hover:scale-[1.02]`}>
+    <div className={`p-6 rounded-xl border ${colorMap[color]} shadow-lg transition-all duration-300 hover:scale-[1.02] hover:bg-slate-800/80`}>
       <div className="flex justify-between items-start">
-        <div>
-          <p className="text-slate-400 text-sm font-medium mb-1">{title}</p>
-          <h4 className="text-2xl font-bold text-white mb-1">{value}</h4>
-          <p className="text-slate-500 text-xs">{subtitle}</p>
+        <div className="flex-1">
+          <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
+          <h4 className="text-2xl font-black text-white mb-1 truncate">{value}</h4>
+          <p className="text-slate-500 text-[10px] font-medium">{subtitle}</p>
         </div>
-        <div className={`p-3 rounded-lg ${colorMap[color].split(' ')[0]}`}>
-          <Icon size={24} />
+        <div className={`p-3 rounded-xl ${colorMap[color].split(' ')[0]} border shadow-inner`}>
+          <Icon size={20} />
         </div>
       </div>
     </div>

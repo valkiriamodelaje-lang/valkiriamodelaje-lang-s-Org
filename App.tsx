@@ -8,26 +8,12 @@ import { AttendanceLog, Configuration, TabType, Sede, Modelo, Plataforma } from 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AlertCircle, Terminal } from 'lucide-react';
 
-/**
- * Obtiene variables de entorno de forma segura evitando errores de 'undefined'
- * mediante el uso de encadenamiento opcional (optional chaining).
- * Busca en import.meta.env (Vite) y process.env (Vercel/Node) con y sin prefijo VITE_.
- */
-const SUPABASE_URL = 
-  (import.meta as any).env?.VITE_SUPABASE_URL || 
-  (import.meta as any).env?.SUPABASE_URL || 
-  (typeof process !== 'undefined' ? (process as any).env?.VITE_SUPABASE_URL : '') ||
-  (typeof process !== 'undefined' ? (process as any).env?.SUPABASE_URL : '') ||
-  '';
+// Variables de entorno siguiendo el estándar VITE (obligatorio prefijo VITE_)
+// Se accede vía import.meta.env para compatibilidad total con el bundler de Vercel/Vite
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
 
-const SUPABASE_ANON_KEY = 
-  (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 
-  (import.meta as any).env?.SUPABASE_ANON_KEY || 
-  (typeof process !== 'undefined' ? (process as any).env?.VITE_SUPABASE_ANON_KEY : '') ||
-  (typeof process !== 'undefined' ? (process as any).env?.SUPABASE_ANON_KEY : '') ||
-  '';
-
-// Inicialización única del cliente de Supabase
+// Inicialización única del cliente
 const supabase: SupabaseClient | null = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
   : null;
@@ -47,6 +33,7 @@ export default function App() {
     
     setLoading(true);
     try {
+      // Carga de maestros (Sedes, Modelos, Plataformas)
       const [rSedes, rModelos, rPlataformas] = await Promise.all([
         supabase.from('sedes').select('*').order('name'),
         supabase.from('modelos').select('*').order('name'),
@@ -70,6 +57,7 @@ export default function App() {
       };
       setConfig(newConfig);
 
+      // Carga de registros de asistencia con relaciones (Joins)
       const { data: logsData, error: logsError } = await supabase
         .from('attendance_logs')
         .select(`
@@ -122,7 +110,7 @@ export default function App() {
       }]);
     
     if (insertError) alert("Error al guardar: " + insertError.message);
-    else fetchData();
+    else fetchData(); // Refresca los datos inmediatamente después de guardar
   };
 
   const deleteLog = async (id: string) => {
@@ -139,20 +127,15 @@ export default function App() {
           <AlertCircle className="text-amber-500 mx-auto mb-4" size={56} />
           <h1 className="text-2xl font-bold mb-4">Configuración Pendiente</h1>
           <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-            Para que <strong>ValkiriaStudio</strong> funcione correctamente en producción, debes configurar las variables de entorno.
+            Faltan las variables <strong>VITE_SUPABASE_URL</strong> y <strong>VITE_SUPABASE_ANON_KEY</strong> en Vercel.
           </p>
-          
-          <div className="space-y-4 text-left">
-            <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-700">
-              <div className="flex items-center gap-2 mb-2 text-indigo-400">
-                <Terminal size={16} />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Variables en Vercel</span>
-              </div>
-              <ul className="text-xs text-slate-300 space-y-1 font-mono">
-                <li>VITE_SUPABASE_URL</li>
-                <li>VITE_SUPABASE_ANON_KEY</li>
-              </ul>
-            </div>
+          <div className="bg-slate-900/80 p-4 rounded-xl border border-slate-700 text-left">
+            <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest mb-2">Instrucciones</p>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              1. Ve a Vercel Settings > Environment Variables.<br/>
+              2. Agrega las variables con el prefijo <strong>VITE_</strong>.<br/>
+              3. Haz un nuevo "Redeploy" para aplicar los cambios.
+            </p>
           </div>
         </div>
       </div>
@@ -164,7 +147,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
-          <p className="text-slate-500 text-sm animate-pulse">Sincronizando ValkiriaCloud...</p>
+          <p className="text-slate-500 text-sm animate-pulse font-medium">Sincronizando ValkiriaCloud...</p>
         </div>
       </div>
     );
