@@ -104,7 +104,7 @@ export default function App() {
     }
   };
 
-  const addLog = async (logData: any) => {
+  const addLog = async (logData: AttendanceLog) => {
     if (!supabase) return;
     const { error: insertError } = await supabase
       .from('attendance_logs')
@@ -114,7 +114,7 @@ export default function App() {
         plataforma_id: logData.plataformaId,
         horas_conexion: logData.horasConexion,
         total_tokens: logData.totalTokens,
-        date: new Date().toISOString()
+        date: logData.date // Ahora usa la fecha del formulario
       }]);
     
     if (insertError) alert("Error al guardar: " + insertError.message);
@@ -128,7 +128,6 @@ export default function App() {
     else fetchData(supabase);
   };
 
-  // 1. MODO CONFIGURACIÓN (Solo si no hay variables de entorno ni cliente)
   if (!supabase && !VITE_URL) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-slate-100 font-sans">
@@ -178,7 +177,6 @@ export default function App() {
     );
   }
 
-  // 2. MODO CARGA
   if (loading && logs.length === 0) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -190,7 +188,6 @@ export default function App() {
     );
   }
 
-  // 3. APP PRINCIPAL
   return (
     <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
       <div className="max-w-7xl mx-auto px-4 py-8">

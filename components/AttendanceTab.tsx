@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { AttendanceLog, Configuration, Sede, Modelo, Plataforma } from '../types';
-import { PlusCircle, Trash2, Clock, Landmark, User, Globe, Filter, Download } from 'lucide-react';
+import { PlusCircle, Trash2, Clock, Landmark, User, Globe, Filter, Download, Calendar } from 'lucide-react';
 
 interface AttendanceTabProps {
   logs: AttendanceLog[];
@@ -12,6 +12,7 @@ interface AttendanceTabProps {
 
 export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAddLog, onDeleteLog }) => {
   const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
     sedeId: '',
     modeloId: '',
     plataformaId: '',
@@ -37,9 +38,10 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAd
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const { sedeId, modeloId, plataformaId, horasConexion, totalTokens } = formData;
-    if (!sedeId || !modeloId || !plataformaId) {
-      alert('Por favor complete todos los campos obligatorios.');
+    const { date, sedeId, modeloId, plataformaId, horasConexion, totalTokens } = formData;
+    
+    if (!date || !sedeId || !modeloId || !plataformaId) {
+      alert('Por favor complete todos los campos obligatorios, incluyendo la fecha.');
       return;
     }
 
@@ -49,7 +51,7 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAd
 
     const newLog: AttendanceLog = {
       id: crypto.randomUUID(),
-      date: new Date().toISOString(),
+      date: date, // Usamos la fecha seleccionada en el input
       sedeId,
       sedeName: sede?.name || '',
       modeloId,
@@ -61,7 +63,8 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAd
     };
 
     onAddLog(newLog);
-    setFormData({ sedeId: '', modeloId: '', plataformaId: '', horasConexion: '', totalTokens: '' });
+    // Reiniciamos pero mantenemos la fecha para que sea más fácil cargar varios registros seguidos del mismo día
+    setFormData({ ...formData, sedeId: '', modeloId: '', plataformaId: '', horasConexion: '', totalTokens: '' });
   };
 
   const filteredLogs = useMemo(() => {
@@ -98,10 +101,10 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAd
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      <header className="flex justify-between items-end">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-bold text-white">Planilla de Asistencia</h2>
-          <p className="text-slate-400">Registra las sesiones filtradas por sede.</p>
+          <p className="text-slate-400">Registra las sesiones. Ahora puedes elegir la fecha de trabajo.</p>
         </div>
         <button onClick={exportToCSV} className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg border border-slate-700 text-sm font-medium">
           <Download size={16} /> Exportar CSV
@@ -111,17 +114,27 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAd
       {/* Form with Relational Filtering */}
       <section className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
         <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-          <PlusCircle className="text-indigo-400" size={20} /> Nuevo Registro Relacional
+          <PlusCircle className="text-indigo-400" size={20} /> Nuevo Registro
         </h3>
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Calendar size={12} /> Fecha</label>
+            <input 
+              type="date" 
+              value={formData.date} 
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })} 
+              className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
+            />
+          </div>
+
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Landmark size={12} /> Sede</label>
             <select
               value={formData.sedeId}
               onChange={(e) => setFormData({ ...formData, sedeId: e.target.value, modeloId: '', plataformaId: '' })}
-              className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none"
+              className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
             >
-              <option value="">Seleccionar Sede...</option>
+              <option value="">Sede...</option>
               {config.sedes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
@@ -134,7 +147,7 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAd
               onChange={(e) => setFormData({ ...formData, modeloId: e.target.value })}
               className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">{formData.sedeId ? 'Seleccionar Modelo...' : 'Elija Sede primero'}</option>
+              <option value="">{formData.sedeId ? 'Modelo...' : 'Elija Sede'}</option>
               {availableModelos.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </div>
@@ -147,23 +160,23 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAd
               onChange={(e) => setFormData({ ...formData, plataformaId: e.target.value })}
               className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <option value="">{formData.sedeId ? 'Seleccionar Plataforma...' : 'Elija Sede primero'}</option>
+              <option value="">{formData.sedeId ? 'Plataforma...' : 'Elija Sede'}</option>
               {availablePlataformas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><Clock size={12} /> Horas</label>
-            <input type="number" step="0.1" value={formData.horasConexion} onChange={(e) => setFormData({ ...formData, horasConexion: e.target.value })} placeholder="0.0" className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 outline-none" />
+            <input type="number" step="0.1" value={formData.horasConexion} onChange={(e) => setFormData({ ...formData, horasConexion: e.target.value })} placeholder="0.0" className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
 
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1">Tokens</label>
-            <input type="number" value={formData.totalTokens} onChange={(e) => setFormData({ ...formData, totalTokens: e.target.value })} placeholder="0" className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 outline-none" />
+            <input type="number" value={formData.totalTokens} onChange={(e) => setFormData({ ...formData, totalTokens: e.target.value })} placeholder="0" className="w-full bg-slate-900 border border-slate-700 text-white rounded-lg p-3 outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
 
-          <div className="md:col-span-3 lg:col-span-5 flex justify-end">
-            <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-8 py-3 rounded-lg font-bold shadow-lg transition-all">Guardar</button>
+          <div className="md:col-span-3 lg:col-span-6 flex justify-end pt-2">
+            <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white px-10 py-3 rounded-lg font-bold shadow-lg shadow-indigo-900/40 transition-all active:scale-95">Guardar Registro</button>
           </div>
         </form>
       </section>
@@ -172,54 +185,59 @@ export const AttendanceTab: React.FC<AttendanceTabProps> = ({ logs, config, onAd
       <section className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-xl">
         <div className="p-6 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
           <div className="flex items-center gap-2"><Filter size={20} className="text-indigo-400" /><h3 className="text-lg font-semibold text-white">Historial Filtrable</h3></div>
-          <span className="text-slate-400 text-sm">Viendo {filteredLogs.length} registros</span>
+          <span className="text-slate-400 text-sm font-medium">Viendo {filteredLogs.length} registros</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-slate-900/80 text-slate-400 text-xs font-bold uppercase tracking-wider">
+            <thead className="bg-slate-900/80 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
               <tr>
                 <th className="px-6 py-4">
                   Fecha
-                  <input type="date" value={tableFilters.date} onChange={e => setTableFilters({...tableFilters, date: e.target.value})} className="block mt-2 w-full bg-slate-800 border-slate-700 rounded text-[10px]" />
+                  <input type="date" value={tableFilters.date} onChange={e => setTableFilters({...tableFilters, date: e.target.value})} className="block mt-2 w-full bg-slate-800 border-slate-700 rounded text-[10px] p-1" />
                 </th>
                 <th className="px-6 py-4">
                   Sede
-                  <select value={tableFilters.sedeId} onChange={e => setTableFilters({...tableFilters, sedeId: e.target.value})} className="block mt-2 w-full bg-slate-800 border-slate-700 rounded text-[10px]">
+                  <select value={tableFilters.sedeId} onChange={e => setTableFilters({...tableFilters, sedeId: e.target.value})} className="block mt-2 w-full bg-slate-800 border-slate-700 rounded text-[10px] p-1">
                     <option value="">Todas</option>
                     {config.sedes.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 </th>
                 <th className="px-6 py-4">
                   Modelo
-                  <select value={tableFilters.modeloId} onChange={e => setTableFilters({...tableFilters, modeloId: e.target.value})} className="block mt-2 w-full bg-slate-800 border-slate-700 rounded text-[10px]">
+                  <select value={tableFilters.modeloId} onChange={e => setTableFilters({...tableFilters, modeloId: e.target.value})} className="block mt-2 w-full bg-slate-800 border-slate-700 rounded text-[10px] p-1">
                     <option value="">Todos</option>
                     {config.modelos.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                   </select>
                 </th>
                 <th className="px-6 py-4">
                   Plataforma
-                  <select value={tableFilters.plataformaId} onChange={e => setTableFilters({...tableFilters, plataformaId: e.target.value})} className="block mt-2 w-full bg-slate-800 border-slate-700 rounded text-[10px]">
+                  <select value={tableFilters.plataformaId} onChange={e => setTableFilters({...tableFilters, plataformaId: e.target.value})} className="block mt-2 w-full bg-slate-800 border-slate-700 rounded text-[10px] p-1">
                     <option value="">Todas</option>
                     {config.plataformas.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </th>
                 <th className="px-6 py-4">Horas</th>
                 <th className="px-6 py-4">Tokens</th>
-                <th className="px-6 py-4 text-right">Borrar</th>
+                <th className="px-6 py-4 text-right">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-700">
               {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-700/50">
-                  <td className="px-6 py-4 text-sm text-slate-400">{new Date(log.date).toLocaleDateString()}</td>
+                <tr key={log.id} className="hover:bg-slate-700/50 transition-colors">
+                  <td className="px-6 py-4 text-sm text-slate-400 whitespace-nowrap">{new Date(log.date).toLocaleDateString()}</td>
                   <td className="px-6 py-4 text-sm font-medium text-white">{log.sedeName}</td>
                   <td className="px-6 py-4 text-sm text-indigo-300">{log.modeloName}</td>
                   <td className="px-6 py-4 text-sm text-slate-300">{log.plataformaName}</td>
                   <td className="px-6 py-4 text-sm text-slate-400 font-mono">{log.horasConexion}h</td>
                   <td className="px-6 py-4 text-sm font-bold text-emerald-400">{log.totalTokens}</td>
-                  <td className="px-6 py-4 text-right"><button onClick={() => onDeleteLog(log.id)} className="text-rose-400 hover:text-rose-300 p-2"><Trash2 size={16} /></button></td>
+                  <td className="px-6 py-4 text-right"><button onClick={() => onDeleteLog(log.id)} className="text-rose-400 hover:text-rose-300 p-2 transition-colors"><Trash2 size={16} /></button></td>
                 </tr>
               ))}
+              {filteredLogs.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 italic text-sm">No hay registros que coincidan con los filtros.</td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
