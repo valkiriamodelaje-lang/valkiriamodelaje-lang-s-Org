@@ -9,7 +9,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 
 // IMPORTANTE: Acceso directo y literal para que los bundlers (Vite/Vercel) puedan inyectarlos
-// No usar funciones envolventes ni corchetes [key]
 // @ts-ignore
 const SUPABASE_URL = (typeof process !== 'undefined' && process.env?.SUPABASE_URL) || '';
 // @ts-ignore
@@ -53,10 +52,19 @@ export default function App() {
 
       if (logsError) throw logsError;
 
+      // Mapeo riguroso de snake_case (DB) a camelCase (App)
       setConfig({
         sedes: (sedes as Sede[]) || [],
-        modelos: (modelos || []).map((m: any) => ({ id: m.id, name: m.name, sedeId: m.sede_id })),
-        plataformas: (plataformas || []).map((p: any) => ({ id: p.id, name: p.name, sedeId: p.sede_id }))
+        modelos: (modelos || []).map((m: any) => ({ 
+          id: m.id, 
+          name: m.name, 
+          sedeId: m.sede_id // Sincronizamos con el nombre en la DB
+        })),
+        plataformas: (plataformas || []).map((p: any) => ({ 
+          id: p.id, 
+          name: p.name, 
+          sedeId: p.sede_id // Sincronizamos con el nombre en la DB
+        }))
       });
 
       if (logsData) {
@@ -113,7 +121,6 @@ export default function App() {
     else fetchData();
   };
 
-  // Pantalla de error si faltan variables (ahora con más info para debugear)
   if (!supabase) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 font-sans">
@@ -152,7 +159,7 @@ export default function App() {
               Refrescar Página
             </button>
             <p className="text-[10px] text-slate-500 italic">
-              * Si las variables aparecen como "FALTANTE", ve a Vercel > Deployments y selecciona "Redeploy" en el último envío.
+              * Si las variables aparecen como "FALTANTE", ve a Vercel &gt; Deployments y selecciona "Redeploy" en el último envío.
             </p>
           </div>
         </div>
