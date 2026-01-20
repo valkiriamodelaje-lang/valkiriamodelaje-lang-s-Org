@@ -6,7 +6,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 interface SettingsTabProps {
   config: Configuration;
-  supabase: SupabaseClient | null; // Cambiado a null para coincidir con App.tsx
+  supabase: SupabaseClient | null;
   onRefresh: () => void;
 }
 
@@ -63,7 +63,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ config, supabase, onRe
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Columna Sedes */}
         <div className="lg:col-span-4 bg-slate-800 rounded-xl border border-slate-700 shadow-xl flex flex-col h-[600px]">
           <div className="p-4 border-b border-slate-700 bg-slate-900/50 flex items-center gap-2">
             <Landmark className="text-indigo-400" size={20} />
@@ -102,7 +101,6 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ config, supabase, onRe
           </div>
         </div>
 
-        {/* Columna Detalle Recursos */}
         <div className="lg:col-span-8">
           {!selectedSede ? (
             <div className="h-full min-h-[400px] flex flex-col items-center justify-center bg-slate-800/30 border border-dashed border-slate-700 rounded-xl p-12 text-center">
@@ -140,7 +138,15 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({ config, supabase, onRe
   );
 };
 
-const ResourcePanel = ({ title, icon: Icon, items, onAdd, onRemove }: any) => {
+interface ResourcePanelProps {
+  title: string;
+  icon: any;
+  items: any[];
+  onAdd: (name: string) => void;
+  onRemove: (id: string) => void;
+}
+
+const ResourcePanel: React.FC<ResourcePanelProps> = ({ title, icon: Icon, items, onAdd, onRemove }) => {
   const [val, setVal] = useState('');
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700 shadow-xl flex flex-col h-[400px]">

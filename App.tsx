@@ -117,7 +117,6 @@ export default function App() {
     else fetchData();
   };
 
-  // 1. Pantalla de error si faltan credenciales
   if (!supabase) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
@@ -125,18 +124,19 @@ export default function App() {
           <AlertCircle className="text-amber-500 mx-auto mb-4" size={48} />
           <h1 className="text-xl font-bold text-white mb-4">Configuración Requerida</h1>
           <p className="text-slate-400 text-sm mb-6">
-            Detectamos que las variables de entorno no están configuradas en Vercel. 
-            Asegúrate de agregar <strong>SUPABASE_URL</strong> y <strong>SUPABASE_ANON_KEY</strong>.
+            Asegúrate de agregar <strong>SUPABASE_URL</strong> y <strong>SUPABASE_ANON_KEY</strong> en las variables de entorno de Vercel.
           </p>
           <div className="bg-slate-900/50 p-4 rounded-lg text-left text-xs text-slate-500 font-mono">
-            Vercel -> Settings -> Environment Variables
+            Vercel &rarr; Settings &rarr; Environment Variables
           </div>
+          <p className="mt-4 text-[10px] text-slate-500 italic">
+            * Después de guardar, ve a Deployments y haz clic en "Redeploy".
+          </p>
         </div>
       </div>
     );
   }
 
-  // 2. Pantalla de carga
   if (loading && logs.length === 0 && config.sedes.length === 0) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
