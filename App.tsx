@@ -6,22 +6,16 @@ import { AnalyticsTab } from './components/AnalyticsTab';
 import { SettingsTab } from './components/SettingsTab';
 import { AttendanceLog, Configuration, TabType, Sede, Modelo, Plataforma } from './types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { AlertTriangle, Database } from 'lucide-react';
+import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 
-const getEnv = (key: string): string => {
-  try {
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env) {
-      // @ts-ignore
-      return process.env[key] || '';
-    }
-  } catch (e) {}
-  return '';
-};
+// IMPORTANTE: Acceso directo y literal para que los bundlers (Vite/Vercel) puedan inyectarlos
+// No usar funciones envolventes ni corchetes [key]
+// @ts-ignore
+const SUPABASE_URL = (typeof process !== 'undefined' && process.env?.SUPABASE_URL) || '';
+// @ts-ignore
+const SUPABASE_ANON_KEY = (typeof process !== 'undefined' && process.env?.SUPABASE_ANON_KEY) || '';
 
-const SUPABASE_URL = getEnv('SUPABASE_URL');
-const SUPABASE_ANON_KEY = getEnv('SUPABASE_ANON_KEY');
-
+// Inicializar cliente solo si las variables existen físicamente
 const supabase: SupabaseClient | null = (SUPABASE_URL && SUPABASE_ANON_KEY) 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
   : null;
@@ -44,7 +38,7 @@ export default function App() {
       const { data: plataformas, error: e3 } = await supabase.from('plataformas').select('*');
       
       if (e1 || e2 || e3) {
-        console.error("Error cargando configuración:", e1 || e2 || e3);
+        console.error("Error en configuración:", e1 || e2 || e3);
       }
 
       const { data: logsData, error: logsError } = await supabase
@@ -119,14 +113,48 @@ export default function App() {
     else fetchData();
   };
 
+  // Pantalla de error si faltan variables (ahora con más info para debugear)
   if (!supabase) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 font-sans">
         <div className="max-w-md w-full bg-slate-800 border border-slate-700 rounded-2xl p-8 text-center shadow-2xl">
-          <AlertTriangle className="text-amber-500 mx-auto mb-4" size={48} />
-          <h1 className="text-2xl font-bold text-white mb-2">Variables de Entorno Faltantes</h1>
-          <p className="text-slate-400 mb-6 text-sm">Asegúrate de configurar SUPABASE_URL y SUPABASE_ANON_KEY en el panel de Vercel.</p>
-          <button onClick={() => window.location.reload()} className="w-full bg-indigo-600 py-3 rounded-xl text-white font-bold">Reintentar</button>
+          <div className="inline-flex p-4 bg-amber-500/10 rounded-full mb-6">
+            <AlertTriangle className="text-amber-500" size={40} />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Variables No Detectadas</h1>
+          <p className="text-slate-400 mb-6 text-sm leading-relaxed">
+            Vercel no ha inyectado las claves de Supabase. Esto ocurre si no has realizado un <strong>Redeploy</strong> después de añadirlas.
+          </p>
+          
+          <div className="bg-slate-900/50 rounded-lg p-4 mb-6 text-left border border-slate-700/50">
+            <h2 className="text-xs font-bold text-slate-500 uppercase mb-3 tracking-widest">Estado de claves:</h2>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-mono">SUPABASE_URL:</span>
+                <span className={SUPABASE_URL ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                  {SUPABASE_URL ? "DETECTADA" : "FALTANTE"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 font-mono">SUPABASE_ANON_KEY:</span>
+                <span className={SUPABASE_ANON_KEY ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>
+                  {SUPABASE_ANON_KEY ? "DETECTADA" : "FALTANTE"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button 
+              onClick={() => window.location.reload()} 
+              className="w-full bg-indigo-600 hover:bg-indigo-500 py-3 rounded-xl text-white font-bold transition-all shadow-lg"
+            >
+              Refrescar Página
+            </button>
+            <p className="text-[10px] text-slate-500 italic">
+              * Si las variables aparecen como "FALTANTE", ve a Vercel > Deployments y selecciona "Redeploy" en el último envío.
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -137,10 +165,9 @@ export default function App() {
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-slate-800 border border-rose-500/50 rounded-2xl p-8 text-center shadow-2xl">
           <Database className="text-rose-500 mx-auto mb-4" size={48} />
-          <h1 className="text-2xl font-bold text-white mb-2">Error de Base de Datos</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">Error de Conexión</h1>
           <p className="text-rose-400 mb-6 text-sm bg-rose-500/10 p-3 rounded-lg border border-rose-500/20">{error}</p>
-          <p className="text-slate-400 text-xs mb-6">Verifica que las tablas existan y que las políticas de RLS permitan lectura pública.</p>
-          <button onClick={fetchData} className="w-full bg-slate-700 py-3 rounded-xl text-white font-bold">Reintentar Carga</button>
+          <button onClick={fetchData} className="w-full bg-slate-700 py-3 rounded-xl text-white font-bold">Reintentar</button>
         </div>
       </div>
     );
@@ -150,8 +177,11 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto"></div>
-          <p className="text-slate-400 font-medium">Sincronizando con Valkiria Cloud...</p>
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-500 mx-auto"></div>
+            <ShieldCheck className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-indigo-400/50" size={24} />
+          </div>
+          <p className="text-slate-400 font-medium tracking-wide">Autenticando Valkiria Cloud...</p>
         </div>
       </div>
     );
