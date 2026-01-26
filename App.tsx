@@ -6,12 +6,12 @@ import { AnalyticsTab } from './components/AnalyticsTab';
 import { SettingsTab } from './components/SettingsTab';
 import { AttendanceLog, Configuration, TabType, Sede, Modelo, Plataforma } from './types';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { AlertCircle, Database, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Terminal, Database, ShieldCheck, RefreshCcw } from 'lucide-react';
 
-// Búsqueda exhaustiva de variables de entorno (con y sin prefijo VITE)
-const env = process.env as any;
-const SUPABASE_URL = env?.VITE_SUPABASE_URL || env?.SUPABASE_URL || '';
-const SUPABASE_KEY = env?.VITE_SUPABASE_ANON_KEY || env?.SUPABASE_ANON_KEY || '';
+// Intentar capturar las variables de entorno de forma segura para Vite/Vercel
+// Fix: Use process.env instead of import.meta.env to resolve TypeScript errors and follow environment standards.
+const VITE_URL = (process.env as any)?.VITE_SUPABASE_URL || '';
+const VITE_KEY = (process.env as any)?.VITE_SUPABASE_ANON_KEY || '';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('attendance');
@@ -20,19 +20,16 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Detectar si estamos en un entorno de desarrollo (localhost)
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-
-  // Estado para credenciales manuales (solo para localhost si fallan las env)
+  // Estado para credenciales (inicializa con las de Vite si existen)
   const [creds, setCreds] = useState({
-    url: SUPABASE_URL,
-    key: SUPABASE_KEY
+    url: VITE_URL,
+    key: VITE_KEY
   });
 
-  // Cliente de Supabase inicializado con variables de entorno si existen
+  // Cliente de Supabase: Si existen variables de entorno, se crea automáticamente
   const [supabase, setSupabase] = useState<SupabaseClient | null>(() => {
-    if (SUPABASE_URL && SUPABASE_KEY) {
-      return createClient(SUPABASE_URL, SUPABASE_KEY);
+    if (VITE_URL && VITE_KEY) {
+      return createClient(VITE_URL, VITE_KEY);
     }
     return null;
   });
@@ -118,7 +115,7 @@ export default function App() {
         plataforma_id: logData.plataformaId,
         horas_conexion: logData.horasConexion,
         total_tokens: logData.totalTokens,
-        date: logData.date 
+        date: logData.date // Ahora usa la fecha del formulario
       }]);
     
     if (insertError) alert("Error al guardar: " + insertError.message);
@@ -132,61 +129,53 @@ export default function App() {
     else fetchData(supabase);
   };
 
-  // Lógica de visualización: Solo mostramos la pantalla de conexión si NO hay supabase Y estamos en Localhost.
-  // En Vercel, si no hay supabase, mostraremos un error de configuración en lugar del formulario.
-  if (!supabase) {
-    if (isLocal) {
-      return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-slate-100 font-sans">
-          <div className="max-w-lg w-full bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl space-y-6">
-            <div className="text-center">
-              <div className="bg-indigo-600/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/30">
-                <Database className="text-indigo-400" size={32} />
-              </div>
-              <h1 className="text-2xl font-black mb-2 tracking-tight">ValkiriaStudio Local</h1>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                No se detectaron variables de entorno automáticas. Configura tu conexión para empezar.
-              </p>
+  if (!supabase && !VITE_URL) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-slate-100 font-sans">
+        <div className="max-w-lg w-full bg-slate-800 border border-slate-700 rounded-3xl p-8 shadow-2xl space-y-6">
+          <div className="text-center">
+            <div className="bg-indigo-600/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/30">
+              <Database className="text-indigo-400" size={32} />
             </div>
-            <div className="space-y-4">
-              <input 
-                type="text" 
-                placeholder="Supabase URL"
-                value={creds.url}
-                onChange={e => setCreds({...creds, url: e.target.value})}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-              <input 
-                type="password" 
-                placeholder="Anon Key"
-                value={creds.key}
-                onChange={e => setCreds({...creds, key: e.target.value})}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-              />
-            </div>
-            <button 
-              onClick={handleManualConnect}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
-            >
-              <ShieldCheck size={20} /> Conectar Base de Datos
-            </button>
-          </div>
-        </div>
-      );
-    } else {
-      // En Producción (Vercel) sin variables, mostramos un error limpio
-      return (
-        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6">
-          <div className="text-center space-y-4 max-w-md">
-            <AlertCircle size={48} className="text-rose-500 mx-auto" />
-            <h1 className="text-xl font-bold text-white">Error de Configuración</h1>
-            <p className="text-slate-400 text-sm">
-              Las variables de entorno de Supabase no están configuradas en el panel de Vercel. Por favor, asegúrate de añadir SUPABASE_URL y SUPABASE_ANON_KEY.
+            <h1 className="text-2xl font-black mb-2 tracking-tight">ValkiriaStudio Cloud</h1>
+            <p className="text-slate-400 text-sm leading-relaxed">
+              En Vercel la conexión es automática. En este preview, por favor pega tus datos de Supabase para validar los indicadores.
             </p>
           </div>
+
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Supabase URL</label>
+              <input 
+                type="text" 
+                placeholder="https://your-project.supabase.co"
+                value={creds.url}
+                onChange={e => setCreds({...creds, url: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase ml-1">Anon Key</label>
+              <input 
+                type="password" 
+                placeholder="Pega tu clave pública aquí..."
+                value={creds.key}
+                onChange={e => setCreds({...creds, key: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          <button 
+            onClick={handleManualConnect}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 group"
+          >
+            <ShieldCheck size={20} />
+            Validar Conexión en Preview
+          </button>
         </div>
-      );
-    }
+      </div>
+    );
   }
 
   if (loading && logs.length === 0) {
