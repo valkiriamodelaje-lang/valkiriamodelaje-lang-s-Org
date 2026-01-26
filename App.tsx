@@ -9,8 +9,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { AlertCircle, Terminal, Database, ShieldCheck, RefreshCcw } from 'lucide-react';
 
 // Intentar capturar las variables de entorno de forma segura para Vite/Vercel
-const VITE_URL = import.meta.env?.VITE_SUPABASE_URL || '';
-const VITE_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || '';
+// Fix: Use process.env instead of import.meta.env to resolve TypeScript errors and follow environment standards.
+const VITE_URL = (process.env as any)?.VITE_SUPABASE_URL || '';
+const VITE_KEY = (process.env as any)?.VITE_SUPABASE_ANON_KEY || '';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('attendance');
